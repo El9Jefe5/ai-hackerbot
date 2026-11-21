@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.db import get_db
 from app.core.queue import get_queue
 from app.core.security import current_user
-from app.models import Assessment, AuditLog, Finding, Target, User
+from app.models import Assessment, AuditLog, Finding, Report, Target, User
 from app.scanners.nmap import PROFILES
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
@@ -69,3 +69,14 @@ def get_assessment(assessment_id: int, user: User = Depends(current_user), db: S
         raise HTTPException(404, "Assessment not found")
     fs = db.scalars(select(Finding).where(Finding.assessment_id == a.id).order_by(Finding.port)).all()
     return _out(a, fs)
+
+
+@router.get("/{assessment_id}/report")
+def get_report(assessment_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    a = db.get(Assessment, assessment_id)
+    if not a or a.owner_id != user.id:
+        raise HTTPException(404, "Assessment not found")
+    r = db.scalar(select(Report).where(Report.assessment_id == a.id))
+    if not r:
+        raise HTTPException(404, "Report not generated yet")
+    return {"assessment_id": a.id, "source": r.source, "generated_at": r.created_at, "markdown": r.markdown}

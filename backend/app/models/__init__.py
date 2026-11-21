@@ -75,3 +75,14 @@ class Finding(Base):
     protocol: Mapped[str] = mapped_column(String(8), default="")
     service: Mapped[str] = mapped_column(String(64), default="")
     detail: Mapped[str] = mapped_column(Text, default="")
+
+
+class Report(Base):
+    """Generated assessment report. `source` records whether the narrative came from the LLM or deterministic rules."""
+    __tablename__ = "reports"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assessment_id: Mapped[int] = mapped_column(ForeignKey("assessments.id"), unique=True, index=True)
+    source: Mapped[str] = mapped_column(String(10))  # llm | rules
+    markdown: Mapped[str] = mapped_column(Text)
+    analysis_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

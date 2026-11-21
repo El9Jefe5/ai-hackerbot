@@ -2,21 +2,26 @@
 
 ```mermaid
 flowchart TB
-  UI[Next.js dashboard] --> API[FastAPI: auth, targets, assessments]
+  UI[Next.js dashboard - M4] --> API[FastAPI: auth, targets, assessments, reports]
   API --> DB[(PostgreSQL)]
-  API --> Q[(Redis queue)]
-  Q --> W[Isolated workers]
-  W -->|only after scope.authorize| LAB[Lab network: internal, no egress]
-  W --> AG[LangGraph agent: plan + analyze]
-  AG -.->|fixed tool registry, no shell| W
+  API --> Q1[(Redis: scan queue)]
+  Q1 --> W[Scanner worker: core + lab, no LLM key]
+  W -->|scope.authorize at run time| LAB[Lab network: internal, no egress]
+  W --> DB
+  W --> Q2[(Redis: analysis queue)]
+  Q2 --> AN[Analyst: core only, holds LLM key]
+  AN --> G[LangGraph: score - analyze - report]
+  G -.->|no tools, validated output| LLM[(LLM API)]
+  AN --> DB
   API --> AUD[(audit_log)]
 ```
 
 ## Trust boundaries
-1. **Browser -> API**: JWT bearer, role checks, per-owner resource isolation.
-2. **API -> workers**: jobs reference a `target_id`, never a raw host string.
-3. **Workers -> targets**: every action passes `core/scope.py` (deny by default).
-4. **Agent -> tools**: closed registry of typed actions; no arbitrary commands, no scope expansion.
+1. **Browser -> API**: JWT bearer, role checks, per-owner isolation.
+2. **API -> workers**: jobs carry an id, never a host or command.
+3. **Worker -> targets**: scope check at run time; scans the vetted IP.
+4. **Scan data -> LLM**: untrusted; sanitized, tool-less, output validated (ADR-006).
+5. **Scanner vs analyst**: separate containers and networks (ADR-007).
 
-## Schema (M1)
-`users(id, email, password_hash, role)` · `targets(id, owner_id, value, kind, verified, challenge_token)` · `audit_log(id, user_id, action, detail, ts)`
+## Schema
+`users` · `targets` · `audit_log` · `assessments` · `scan_results` · `findings` · `reports(assessment_id unique, source, markdown, analysis_json)`
