@@ -10,6 +10,7 @@ def _csv(name: str, default: str = "") -> list[str]:
 @dataclass
 class Settings:
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     jwt_secret: str = os.getenv("JWT_SECRET", "dev-only-change-me")
     jwt_ttl_minutes: int = int(os.getenv("JWT_TTL_MINUTES", "60"))
     # Hosts/IPs/CIDRs pre-authorized because WE own them (the lab).
