@@ -39,6 +39,10 @@ def run_assessment(db: Session, assessment_id: int, runner=nmap.run, resolver=sc
         db.add(ScanResult(assessment_id=a.id, tool="nmap", raw=xml))
         for p in ports:
             detail = " ".join(x for x in (p["product"], p["version"]) if x)
+            if p["method"] == "inferred":
+                detail = (detail + " identified from HTTP response").strip()
+            elif not p["confirmed"]:
+                detail = (detail + " [service guessed from port number, unconfirmed]").strip()
             db.add(Finding(
                 assessment_id=a.id, severity="info", host=p["host"], port=p["port"],
                 protocol=p["protocol"], service=p["service"], detail=detail,

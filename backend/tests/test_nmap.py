@@ -31,3 +31,29 @@ def test_argument_injection_rejected(bad):
 def test_unknown_profile_rejected():
     with pytest.raises(ValueError):
         nmap.build_argv("nmap_all_the_things", "172.28.0.10")
+
+
+# Shape taken from a real Juice Shop scan: nmap matched nothing and fell back to its port table.
+UNMATCHED_HTTP = r"""<nmaprun><host><address addr="172.28.0.10"/><ports>
+<port protocol="tcp" portid="3000"><state state="open"/>
+<service name="ppp" servicefp="SF-Port3000-TCP:V=7.95%r(GetRequest,281E,&quot;HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN&quot;)%r(Help,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request&quot;);" method="table" conf="3"/>
+</port></ports></host></nmaprun>"""
+
+GUESS_ONLY = """<nmaprun><host><address addr="172.28.0.10"/><ports>
+<port protocol="tcp" portid="23"><state state="open"/><service name="telnet" method="table" conf="3"/></port>
+</ports></host></nmaprun>"""
+
+
+def test_http_reply_overrides_port_table_guess():
+    p = nmap.parse_xml(UNMATCHED_HTTP)[0]
+    assert p["service"] == "http" and p["method"] == "inferred" and p["confirmed"]
+
+
+def test_bare_table_guess_is_marked_unconfirmed():
+    p = nmap.parse_xml(GUESS_ONLY)[0]
+    assert p["service"] == "telnet" and not p["confirmed"]
+
+
+def test_probed_service_is_confirmed():
+    xml = SAMPLE.replace('<service name="http"', '<service method="probed" name="http"')
+    assert nmap.parse_xml(xml)[0]["confirmed"]
