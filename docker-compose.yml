@@ -1,10 +1,18 @@
-# Two networks: `core` (platform) and `lab` (intentionally vulnerable targets).
-# Workers (M2) will join `lab`; the API never does.
+# Networks: `core` (platform) and `lab` (intentionally vulnerable targets, no internet egress).
+# Only the worker touches both. The API never joins `lab`.
 services:
   db:
     image: postgres:16-alpine
-    environment: { POSTGRES_USER: hackerbot, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpass}", POSTGRES_DB: hackerbot }
+    environment:
+      POSTGRES_USER: hackerbot
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpass}"
+      POSTGRES_DB: hackerbot
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hackerbot -d hackerbot"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
     networks: [core]
   redis:
     image: redis:7-alpine
@@ -13,16 +21,36 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: "postgresql+psycopg://hackerbot:${POSTGRES_PASSWORD:-devpass}@db/hackerbot"
+      REDIS_URL: "redis://redis:6379/0"
       JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET in .env}"
-      LAB_TARGETS: "juice-shop"
+      LAB_TARGETS: "juice-shop,172.28.0.0/24"
     ports: ["8000:8000"]
-    depends_on: [db, redis]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: on-failure
     networks: [core]
+  worker:
+    build: { context: ./backend, dockerfile: Dockerfile.worker }
+    environment:
+      DATABASE_URL: "postgresql+psycopg://hackerbot:${POSTGRES_PASSWORD:-devpass}@db/hackerbot"
+      REDIS_URL: "redis://redis:6379/0"
+      LAB_TARGETS: "juice-shop,172.28.0.0/24"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: on-failure
+    cap_drop: [ALL]                         # -sT connect scans need no capabilities
+    security_opt: ["no-new-privileges:true"]
+    networks: [core, lab]
   juice-shop:            # OWASP Juice Shop: the intentionally vulnerable lab target
     image: bkimminich/juice-shop
     networks: [lab]
 networks:
   core: {}
-  lab: { internal: true }   # no internet egress from the lab
+  lab:
+    internal: true       # no internet egress from the lab
+    ipam:
+      config: [{ subnet: 172.28.0.0/24 }]
 volumes:
   pgdata: {}
