@@ -38,3 +38,40 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(64), index=True)
     detail: Mapped[str] = mapped_column(Text, default="")
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Assessment(Base):
+    """One scan run. status: queued | running | completed | failed | blocked"""
+    __tablename__ = "assessments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    target_id: Mapped[int] = mapped_column(ForeignKey("targets.id"), index=True)
+    profile: Mapped[str] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(20), default="queued", index=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ScanResult(Base):
+    """Raw tool output, kept for audit/reprocessing. Treated as untrusted data."""
+    __tablename__ = "scan_results"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assessment_id: Mapped[int] = mapped_column(ForeignKey("assessments.id"), index=True)
+    tool: Mapped[str] = mapped_column(String(40))
+    raw: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Finding(Base):
+    __tablename__ = "findings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assessment_id: Mapped[int] = mapped_column(ForeignKey("assessments.id"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    severity: Mapped[str] = mapped_column(String(10), default="info")  # info|low|medium|high|critical
+    host: Mapped[str] = mapped_column(String(64), default="")
+    port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    protocol: Mapped[str] = mapped_column(String(8), default="")
+    service: Mapped[str] = mapped_column(String(64), default="")
+    detail: Mapped[str] = mapped_column(Text, default="")
