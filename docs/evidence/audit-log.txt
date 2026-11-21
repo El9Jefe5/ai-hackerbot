@@ -1,0 +1,10 @@
+      action       |                  detail                  |              ts               
+-------------------+------------------------------------------+-------------------------------
+ user.register     | string                                   | 2026-11-21 07:01:23.271704+00
+ user.register     | demo@example.com                         | 2026-11-21 07:06:02.040608+00
+ target.create     | juice-shop                               | 2026-11-21 07:06:39.417967+00
+ scope.deny        | juice-shop Target ownership not verified | 2026-11-21 07:06:56.091478+00
+ target.verify.lab | juice-shop                               | 2026-11-21 07:06:56.140358+00
+ scope.allow       | juice-shop                               | 2026-11-21 07:06:56.207641+00
+(6 rows)
+
