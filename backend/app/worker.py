@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core import scope
 from app.core.config import settings
 from app.core.db import Base, SessionLocal, engine
-from app.core.queue import get_queue
+from app.core.queue import get_analysis_queue, get_queue
 from app.models import Assessment, AuditLog, Finding, ScanResult, Target
 from app.scanners import nmap
 
@@ -22,7 +22,7 @@ def _now():
     return datetime.now(timezone.utc)
 
 
-def run_assessment(db: Session, assessment_id: int, runner=nmap.run, resolver=scope.default_resolver) -> None:
+def run_assessment(db: Session, assessment_id: int, runner=nmap.run, resolver=scope.default_resolver, notify=None) -> None:
     a = db.get(Assessment, assessment_id)
     if not a or a.status != "queued":
         return  # unknown or already handled: idempotent
@@ -57,19 +57,24 @@ def run_assessment(db: Session, assessment_id: int, runner=nmap.run, resolver=sc
     a = db.get(Assessment, assessment_id)
     a.status, a.error, a.finished_at = status, error, _now()
     db.commit()
+    if status == "completed" and notify:
+        try:
+            notify(assessment_id)  # hand off to the analyst service
+        except Exception:
+            log.exception("could not enqueue analysis for %s", assessment_id)
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     Base.metadata.create_all(engine)
-    q = get_queue()
+    q, notify = get_queue(), get_analysis_queue().enqueue
     log.info("worker ready; lab allowlist=%s", settings.lab_targets)
     while True:
         aid = q.dequeue(timeout=5)
         if aid is None:
             continue
         with SessionLocal() as db:
-            run_assessment(db, aid)
+            run_assessment(db, aid, notify=notify)
 
 
 if __name__ == "__main__":
