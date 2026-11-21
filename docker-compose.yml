@@ -43,6 +43,20 @@ services:
     cap_drop: [ALL]                         # -sT connect scans need no capabilities
     security_opt: ["no-new-privileges:true"]
     networks: [core, lab]
+  analyst:               # AI analysis + reporting. core network ONLY: no lab access, no scanner tools.
+    build: ./backend
+    command: ["python", "-m", "app.analyst"]
+    environment:
+      DATABASE_URL: "postgresql+psycopg://hackerbot:${POSTGRES_PASSWORD:-devpass}@db/hackerbot"
+      REDIS_URL: "redis://redis:6379/0"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: on-failure
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [core]
   juice-shop:            # OWASP Juice Shop: the intentionally vulnerable lab target
     image: bkimminich/juice-shop
     networks: [lab]
