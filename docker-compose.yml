@@ -1,0 +1,28 @@
+# Two networks: `core` (platform) and `lab` (intentionally vulnerable targets).
+# Workers (M2) will join `lab`; the API never does.
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: hackerbot, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpass}", POSTGRES_DB: hackerbot }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [core]
+  redis:
+    image: redis:7-alpine
+    networks: [core]
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: "postgresql+psycopg://hackerbot:${POSTGRES_PASSWORD:-devpass}@db/hackerbot"
+      JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET in .env}"
+      LAB_TARGETS: "juice-shop"
+    ports: ["8000:8000"]
+    depends_on: [db, redis]
+    networks: [core]
+  juice-shop:            # OWASP Juice Shop: the intentionally vulnerable lab target
+    image: bkimminich/juice-shop
+    networks: [lab]
+networks:
+  core: {}
+  lab: { internal: true }   # no internet egress from the lab
+volumes:
+  pgdata: {}
