@@ -1,0 +1,38 @@
+       action        |                  detail                  
+---------------------+------------------------------------------
+ user.register       | string
+ user.register       | demo@example.com
+ target.create       | juice-shop
+ scope.deny          | juice-shop Target ownership not verified
+ target.verify.lab   | juice-shop
+ scope.allow         | juice-shop 
+ assessment.create   | id=1 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=1 findings=1
+ assessment.create   | id=2 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=2 findings=1
+ report.generate     | id=2 source=rules
+ assessment.create   | id=3 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=3 findings=1
+ report.generate     | id=3 source=rules
+ assessment.create   | id=4 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=4 findings=1
+ report.generate     | id=4 source=rules
+ report.generate     | id=1 source=rules
+ assessment.create   | id=5 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=5 findings=1
+ report.generate     | id=5 source=rules
+ assessment.create   | id=6 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=6 findings=1
+ report.generate     | id=6 source=rules
+ assessment.create   | id=7 target=juice-shop
+ assessment.start    | juice-shop -> 172.28.0.2
+ assessment.complete | id=7 findings=1
+ report.generate     | id=7 source=rules
+(34 rows)
+
