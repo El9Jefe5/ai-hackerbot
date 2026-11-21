@@ -3,5 +3,6 @@ uvicorn[standard]>=0.34,<1
 sqlalchemy>=2.0.44,<2.1
 psycopg[binary]>=3.2.10,<3.4
 pyjwt>=2.10,<3
+redis>=5,<7
 httpx>=0.28,<1
 pytest>=8.3,<9
